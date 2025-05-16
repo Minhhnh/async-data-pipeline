@@ -59,7 +59,7 @@ async def main():
     monitor.log_event(f"Created CSV file: {csv_filename}")
 
     async for tweet in twitter_source(config.twitter_credentials, monitor, query=QUERY):
-        print(f"Tweet {tweet}")  # Print first 50 chars of tweet
+        print(f"Tweet {tweet}")
         tweet_count += 1
         # Append tweet to CSV file
         tweet['Text'] = tweet['Text'].replace(",", " ").replace("\n", " ")

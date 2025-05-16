@@ -18,24 +18,26 @@ def keyword_filter_transformer(data: str, keyword: str, monitor: PipelineMonitor
     return ""
 
 
-def transform_csv_line_to_dict(line: str, monitor: PipelineMonitor) -> dict:
+def transform_csv_line_to_dict(line: Any, monitor: PipelineMonitor) -> dict:
     """Transforms a CSV line to a dict object."""
     if isinstance(line, dict):
         monitor.log_debug(f"Line is already a dict: {line}")
         return line
     try:
-        parts = line.strip().split(',')
-        print(parts)
+        monitor.log_event(f"Transforming line to dict: {line}")
+        parts = line
+        if isinstance(line, str):
+            parts = line.strip().split(',')
         if len(parts) < 5:
-            monitor.log_debug(f"Invalid line format: {line}")
+            monitor.log_error(f"Invalid line format: {line}")
             return {}
         tweet_data = {
-            'Timestamp': parts[0],
-            'Username': parts[1],
-            'Text': parts[2],
-            'Created At': parts[3],
-            'Retweets': parts[4],
-            'Likes': int(parts[5])
+            "timestamp": parts[0],
+            "username": parts[1],
+            "text": parts[2],
+            "created_at": parts[3],
+            "retweets": parts[4],
+            "likes": int(parts[5]),
         }
         return tweet_data
     except ValueError as e:

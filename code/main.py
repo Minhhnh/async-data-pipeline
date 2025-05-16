@@ -1,10 +1,14 @@
 import asyncio
 from datetime import datetime
-from asyncdatapipeline.pipeline import AsyncDataPipeline, PipelineConfig
-from asyncdatapipeline.sources import twitter_source, file_source
-from asyncdatapipeline.transformers import uppercase_transformer, transform_csv_line_to_dict
+
 from asyncdatapipeline.destinations import file_destination
 from asyncdatapipeline.monitoring import PipelineMonitor
+from asyncdatapipeline.pipeline import AsyncDataPipeline, PipelineConfig
+from asyncdatapipeline.sources import api_source, file_source, twitter_source
+from asyncdatapipeline.transformers import (
+    transform_csv_line_to_dict,
+    uppercase_transformer,
+)
 
 
 async def main():
@@ -24,8 +28,10 @@ async def main():
         nonlocal monitor
         pipeline = AsyncDataPipeline(
             sources=[
-                lambda: twitter_source(config.twitter_credentials, monitor, query=QUERY),
-                lambda: file_source("inputs/tweets.csv", monitor),
+                # lambda: twitter_source(config.twitter_credentials, monitor, query=QUERY),
+                # lambda: file_source("inputs/tweets.csv", monitor),
+                # lambda: api_source("https://api.example.com/data", monitor, locale="ja_JP", max_items=100),
+                lambda: file_source("inputs/tweets.txt", monitor),
             ],
             transformers=[lambda x: uppercase_transformer(x, monitor),
                           lambda x: transform_csv_line_to_dict(x, monitor)],
