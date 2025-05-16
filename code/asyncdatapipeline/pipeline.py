@@ -1,12 +1,12 @@
 import asyncio
 from contextlib import asynccontextmanager
 from time import time
-from typing import Any, AsyncGenerator, Callable, List, Optional
+from typing import Any, AsyncGenerator, Callable, Optional
 
 import aiohttp
 
-from .config import PipelineConfig
-from .monitoring import PipelineMonitor
+from asyncdatapipeline.config import PipelineConfig
+from asyncdatapipeline.monitoring import PipelineMonitor
 
 
 class AsyncDataPipeline:
@@ -14,10 +14,10 @@ class AsyncDataPipeline:
 
     def __init__(
         self,
-        sources: List[Callable[[], AsyncGenerator[Any, None]]],
-        transformers: Optional[List[Callable[[Any, PipelineMonitor], Any]]] = None,
-        destinations: Optional[List[Callable[[Any, PipelineMonitor], None]]] = None,
-        config: Optional[PipelineConfig] = None
+        sources: list[Callable[[], Any | AsyncGenerator]],
+        transformers: list[Callable[[Any], Any]] | None = None,
+        destinations: list[Callable[[Any], asyncio.Future]] | None = None,
+        config: Optional[PipelineConfig] = None,
     ) -> None:
         """
         Initialize the pipeline.
@@ -39,9 +39,7 @@ class AsyncDataPipeline:
     @asynccontextmanager
     async def _http_session(self):
         """Manage HTTP session with TLS support."""
-        async with aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(ssl=self.config.use_tls)
-        ) as session:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.config.use_tls)) as session:
             self.session = session
             try:
                 yield session
@@ -65,7 +63,7 @@ class AsyncDataPipeline:
         result = data
         for transformer in self.transformers:
             try:
-                result = transformer(result, self.monitor)
+                result = transformer(result)
                 if result is None:  # Early exit for filters
                     break
             except Exception as e:
@@ -75,9 +73,10 @@ class AsyncDataPipeline:
 
     async def _dispatch_to_destinations(self, data: Any) -> None:
         """Dispatch data to destinations with concurrency control."""
-        async def try_destination(dest: Callable[[Any, PipelineMonitor], None], data: Any) -> None:
+
+        async def try_destination(dest: Callable[[Any], asyncio.Future], data: Any) -> None:
             async with self.semaphore:
-                await dest(data, self.monitor)
+                await dest(data)
 
         tasks = [try_destination(dest, data) for dest in self.destinations]
         await asyncio.gather(*tasks, return_exceptions=True)
