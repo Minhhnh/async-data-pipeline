@@ -54,7 +54,7 @@ async def main():
     # Create CSV file and write header
     with open(csv_filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["Tweet_count", "Username", "Text", "Created At", "Retweets", "Likes"])
+        writer.writerow(["timestamp", "username", "text", "created_at", "retweets", "likes"])
 
     monitor.log_event(f"Created CSV file: {csv_filename}")
 
@@ -62,9 +62,9 @@ async def main():
         print(f"Tweet {tweet}")
         tweet_count += 1
         # Append tweet to CSV file
-        tweet['Text'] = tweet['Text'].replace(",", " ").replace("\n", " ")
+        tweet['text'] = tweet['text'].replace(",", " ").replace("\n", " ")
         async with aiofiles.open(csv_filename, "a", newline="", encoding="utf-8") as f:
-            csv_line = f"{tweet['Timestamp']},{tweet['Username']},{tweet['Text']},{tweet['Created At']},{tweet['Retweets']},{tweet['Likes']}\n"
+            csv_line = f"{tweet['timestamp']},{tweet['username']},{tweet['text']},{tweet['created_at']},{tweet['retweets']},{tweet['likes']}\n"
             await f.write(csv_line)
         if tweet_count >= max_tweets:
             break

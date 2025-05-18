@@ -24,7 +24,7 @@ def transform_csv_line_to_dict(line: Any, monitor: PipelineMonitor) -> dict:
         monitor.log_debug(f"Line is already a dict: {line}")
         return line
     try:
-        monitor.log_event(f"Transforming line to dict: {line}")
+        monitor.log_debug(f"Transforming line to dict: {line}")
         parts = line
         if isinstance(line, str):
             parts = line.strip().split(',')

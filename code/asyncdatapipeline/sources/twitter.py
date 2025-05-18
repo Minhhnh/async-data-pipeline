@@ -2,12 +2,12 @@
 
 import asyncio
 from datetime import datetime, timedelta
-from typing import Dict, Any, AsyncGenerator
-
-from twikit import Client, TooManyRequests, NotFound
+from typing import Any, AsyncGenerator, Dict
 
 from asyncdatapipeline.monitoring import PipelineMonitor
 from asyncdatapipeline.sources.base import Source
+from dateutil.parser import parse
+from twikit import Client, NotFound, TooManyRequests
 
 
 class TwitterSource(Source):
@@ -56,7 +56,7 @@ class TwitterSource(Source):
                         "timestamp": tweet_time,
                         "username": tweet.user.name,
                         "text": tweet.text.replace(",", " "),
-                        "created_at": tweet.created_at,
+                        "created_at": parse(tweet.created_at).strftime("%Y-%m-%d %H:%M:%S"),
                         "retweets": tweet.retweet_count,
                         "likes": tweet.favorite_count,
                     }
