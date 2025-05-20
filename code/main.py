@@ -46,14 +46,14 @@ async def main():
         nonlocal monitor
         pipeline = AsyncDataPipeline(
             sources=[
-                lambda: twitter_source(config, monitor, query=QUERY),
+                # lambda: twitter_source(config, monitor, query=QUERY),
                 # Use file source with multipart processing
-                # lambda: file_source(
-                #     "inputs/tweets.txt",
-                #     monitor,
-                #     multipart_enabled=config.multipart_enabled,
-                #     chunk_size=config.multipart_chunk_size
-                # ),
+                lambda: file_source(
+                    "inputs/tweets.txt",
+                    monitor,
+                    multipart_enabled=config.multipart_enabled,
+                    chunk_size=config.multipart_chunk_size
+                ),
                 # lambda: file_source("inputs/tweets.csv", monitor),
                 # lambda: api_source("https://api.example.com/data", monitor, locale="ja_JP", max_items=100),
             ],
