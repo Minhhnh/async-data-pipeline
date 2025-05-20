@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-from typing import Dict
+from typing import Dict, Any
 from time import time
 
 
@@ -23,7 +23,7 @@ class LoggingFormatter(logging.Formatter):
         "CRITICAL": "\033[48;5;196;38;5;231m",
     }
 
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         """Config format"""
         levelname = record.levelname
         level_color = self.LEVEL_COLORS.get(levelname, "")
@@ -35,11 +35,11 @@ class LoggingFormatter(logging.Formatter):
 class PipelineMonitor:
     """Observer for tracking pipeline metrics and logging events."""
 
-    def __init__(self):
-        self.metrics = {"throughput": 0, "latency": [], "errors": 0}
+    def __init__(self) -> None:
+        self.metrics: Dict[str, Any] = {"throughput": 0, "latency": [], "errors": 0}
         self.logger = self.configure_logging("logger.log")
 
-    def configure_logging(self, file_name: str, LOGGING_LEVEL: int = logging.INFO):
+    def configure_logging(self, file_name: str, LOGGING_LEVEL: int = logging.INFO) -> logging.Logger:
         logger = logging.getLogger()
         logger.setLevel(LOGGING_LEVEL)
         file_handler = logging.FileHandler(file_name)
@@ -67,21 +67,24 @@ class PipelineMonitor:
 
         return logger
 
-    def log_debug(self, message: str):
+    def log_debug(self, message: str) -> None:
         self.logger.debug(message)
 
-    def log_event(self, message: str):
+    def log_event(self, message: str) -> None:
         self.logger.info(message)
 
-    def log_error(self, message: str):
+    def log_warning(self, message: str) -> None:
+        self.logger.warning(message)
+
+    def log_error(self, message: str) -> None:
         self.logger.error(message)
         self.metrics["errors"] += 1
 
-    def track_processing(self, start_time: float):
+    def track_processing(self, start_time: float) -> None:
         latency = time() - start_time
         self.metrics["throughput"] += 1
         self.metrics["latency"].append(latency)
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> Dict[str, Any]:
         avg_latency = sum(self.metrics["latency"]) / len(self.metrics["latency"]) if self.metrics["latency"] else 0
         return {"throughput": self.metrics["throughput"], "avg_latency": avg_latency, "errors": self.metrics["errors"]}

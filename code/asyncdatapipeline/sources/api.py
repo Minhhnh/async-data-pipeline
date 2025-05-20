@@ -25,7 +25,7 @@ class ApiSource(Source):
         self.faker = Faker(locale)
         self.max_items = max_items
 
-    async def generate(self) -> AsyncGenerator[dict, None]:
+    async def generate(self) -> AsyncGenerator[Dict[str, Any], None]:
         """Generate fake API data using Faker."""
         count = 0
         try:

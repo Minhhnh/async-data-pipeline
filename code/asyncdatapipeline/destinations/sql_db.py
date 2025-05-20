@@ -1,29 +1,29 @@
-from abc import abstractmethod
 from datetime import datetime
+from typing import Dict, List, Any, Optional
 from asyncdatapipeline.destinations.base import Destination
 from asyncdatapipeline.monitoring import PipelineMonitor
 import asyncpg
 
 
 class SQLDB(Destination):
-    "RDB destination class for writing data to a relational database."
+    """RDB destination class for writing data to a relational database."""
 
-    def __init__(self, db_config: dict, monitor: PipelineMonitor):
+    def __init__(self, db_config: Dict[str, Any], monitor: PipelineMonitor):
         super().__init__(monitor)
         self._db_config = db_config
-        self._connection = None
+        self._connection: Optional[asyncpg.Connection] = None
 
 
 class PostgreSQLDestination(SQLDB):
     """PostgreSQL destination for writing data to a PostgreSQL database."""
 
-    def __init__(self, db_config: dict, monitor: PipelineMonitor, table_name: str = "", columns: list = [None]):
+    def __init__(self, db_config: Dict[str, Any], monitor: PipelineMonitor, table_name: str = "", columns: List[str] = None):
         super().__init__(db_config, monitor)
         self._connection: asyncpg.Connection
         self.table_name = table_name
-        self.columns = columns
+        self.columns = columns if columns is not None else []
 
-    async def connect(self):
+    async def connect(self) -> asyncpg.Connection:
         """Connect to the PostgreSQL database."""
         try:
             self._connection = await asyncpg.connect(**self._db_config)
@@ -33,13 +33,13 @@ class PostgreSQLDestination(SQLDB):
             raise
         return self._connection
 
-    async def reconnect(self):
+    async def reconnect(self) -> asyncpg.Connection:
         """Reconnect to the PostgreSQL database."""
         if self._connection:
             await self._connection.close()
-        await self.connect()
+        return await self.connect()
 
-    async def send(self, data: dict) -> None:
+    async def send(self, data: Dict[str, Any]) -> None:
         """Write data to PostgreSQL database asynchronously."""
         try:
             if not self._connection:

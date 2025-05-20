@@ -56,3 +56,4 @@ class PipelineConfig:
     twitter_credentials: dict = field(default_factory=_get_twitter_credentials)
     postgres: dict = field(default_factory=_get_postgres_info)
     mongo: dict = field(default_factory=_get_mongo_info)
+    huggingface_token: Optional[str] = os.getenv("HUGGINGFACE_TOKEN")

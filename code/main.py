@@ -1,18 +1,28 @@
 import asyncio
 from datetime import datetime
 
-from asyncdatapipeline.destinations import (file_destination,
-                                            no_sql_destination,
-                                            sql_destination)
+from asyncdatapipeline.destinations import (
+    file_destination,
+    no_sql_destination,
+    sql_destination,
+)
 from asyncdatapipeline.monitoring import PipelineMonitor
 from asyncdatapipeline.pipeline import AsyncDataPipeline, PipelineConfig
 from asyncdatapipeline.sources import api_source, file_source, twitter_source
-from asyncdatapipeline.transformers import (transform_csv_line_to_dict,
-                                            uppercase_transformer)
+from asyncdatapipeline.transformers import (
+    csv_dict_transformer,
+    deduplication_transformer,
+    nsfw_transformer,
+    uppercase_transformer,
+)
+from huggingface_hub import login
 
 
 async def main():
     config = PipelineConfig(max_concurrent_tasks=5)
+
+    # Login to Hugging Face Hub
+    login(config.huggingface_token)
 
     # Create monitor reference first
     monitor = PipelineMonitor()
@@ -33,15 +43,17 @@ async def main():
                 # lambda: file_source("inputs/tweets.txt", monitor),
             ],
             transformers=[
-                lambda x: uppercase_transformer(x, monitor),
-                lambda x: transform_csv_line_to_dict(x, monitor)
+                uppercase_transformer(monitor),
+                csv_dict_transformer(monitor),
+                deduplication_transformer(monitor, capacity=10000, error_rate=0.01),
+                nsfw_transformer(monitor),
             ],
             destinations=[
-                # file_destination(monitor, "outputs/output.txt"),
+                file_destination(monitor, "outputs/output.txt"),
                 # file_destination(monitor, "outputs/output.csv"),
                 # file_destination(monitor, "outputs/output.json"),
                 # sql_destination(monitor, config.postgres),
-                no_sql_destination(monitor, config.mongo),
+                # no_sql_destination(monitor, config.mongo),
             ],
             config=config,
         )

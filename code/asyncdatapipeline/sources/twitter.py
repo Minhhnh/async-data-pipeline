@@ -13,15 +13,15 @@ from twikit import Client, NotFound, TooManyRequests
 class TwitterSource(Source):
     """Twitter/X stream source using twikit."""
 
-    def __init__(self, credentials: Dict[str, str], monitor: PipelineMonitor, query: str = "#tech"):
+    def __init__(self, credentials: Dict[str, str], monitor: PipelineMonitor, query: str = "#tech") -> None:
         super().__init__(monitor)
-        self.credentials = credentials
-        self.query = query
+        self.credentials: Dict[str, str] = credentials
+        self.query: str = query
 
     async def initialize_client(self) -> Client:
         """Initialize and authenticate Twitter client."""
-        client = Client("en-US")
-        cookie_auth_successful = False
+        client: Client = Client("en-US")
+        cookie_auth_successful: bool = False
         try:
             client.load_cookies("cookies.json")
             self.monitor.log_event("Using saved cookies for authentication")
@@ -48,10 +48,10 @@ class TwitterSource(Source):
         """Generate tweets from Twitter/X."""
         while True:
             try:
-                client = await self.initialize_client()
-                tweets = await client.search_tweet(self.query, product="Latest")
+                client: Client = await self.initialize_client()
+                tweets: Any = await client.search_tweet(self.query, product="Latest")
                 for tweet in tweets:
-                    tweet_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    tweet_time: str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     yield {
                         "timestamp": tweet_time,
                         "username": tweet.user.name,
@@ -61,13 +61,13 @@ class TwitterSource(Source):
                         "likes": tweet.favorite_count,
                     }
             except TooManyRequests as too_many_requests:
-                reset_timestamp = (
+                reset_timestamp: float = (
                     too_many_requests.rate_limit_reset
                     or datetime.now().timestamp() + timedelta(minutes=5).total_seconds()
                 )
-                reset_time = datetime.fromtimestamp(reset_timestamp)
+                reset_time: datetime = datetime.fromtimestamp(reset_timestamp)
                 self.monitor.log_event(f"Rate limit reached. Waiting until {reset_time}")
-                wait_time = (reset_time - datetime.now()).total_seconds() + 5
+                wait_time: float = (reset_time - datetime.now()).total_seconds() + 5
                 await asyncio.sleep(max(wait_time, 0))
                 continue
             except NotFound as e:

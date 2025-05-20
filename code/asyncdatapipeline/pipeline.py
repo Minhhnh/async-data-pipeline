@@ -1,12 +1,17 @@
 import asyncio
 from contextlib import asynccontextmanager
 from time import time
-from typing import Any, AsyncGenerator, Callable, Optional
+from typing import Any, AsyncGenerator, Callable, List, Optional, Coroutine, TypeVar
 
 import aiohttp
 
 from asyncdatapipeline.config import PipelineConfig
 from asyncdatapipeline.monitoring import PipelineMonitor
+
+T = TypeVar('T')
+SourceType = Callable[[], AsyncGenerator[Any, None]]
+TransformerType = Callable[[Any], Any]
+DestinationType = Callable[[Any], Coroutine[Any, Any, None]]
 
 
 class AsyncDataPipeline:
@@ -14,9 +19,9 @@ class AsyncDataPipeline:
 
     def __init__(
         self,
-        sources: list[Callable[[], Any | AsyncGenerator]],
-        transformers: list[Callable[[Any], Any]] | None = None,
-        destinations: list[Callable[[Any], asyncio.Future]] | None = None,
+        sources: List[SourceType],
+        transformers: Optional[List[TransformerType]] = None,
+        destinations: Optional[List[DestinationType]] = None,
         config: Optional[PipelineConfig] = None,
     ) -> None:
         """
@@ -37,7 +42,7 @@ class AsyncDataPipeline:
         self.session: Optional[aiohttp.ClientSession] = None
 
     @asynccontextmanager
-    async def _http_session(self):
+    async def _http_session(self) -> AsyncGenerator[aiohttp.ClientSession, None]:
         """Manage HTTP session with TLS support."""
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.config.use_tls)) as session:
             self.session = session
@@ -46,7 +51,7 @@ class AsyncDataPipeline:
             finally:
                 self.session = None
 
-    async def _process_source(self, source: Callable[[], AsyncGenerator[Any, None]]) -> None:
+    async def _process_source(self, source: SourceType) -> None:
         """Process a single source, apply transformations, and dispatch to destinations."""
         try:
             async for data in source():
@@ -59,22 +64,29 @@ class AsyncDataPipeline:
             self.monitor.log_error(f"Error processing source: {e}")
 
     async def _apply_transformers(self, data: Any) -> Any:
-        """Apply transformers sequentially."""
+        """Apply transformers sequentially with support for async transformers."""
         result = data
         for transformer in self.transformers:
             try:
-                result = transformer(result)
+                # Apply transformer, supporting both async and non-async transformer functions
+                transformed = transformer(result)
+                if asyncio.iscoroutine(transformed):
+                    result = await transformed
+                else:
+                    result = transformed
+
                 if result is None:  # Early exit for filters
                     break
             except Exception as e:
-                self.monitor.log_error(f"Error in transformer {transformer.__name__}: {e}")
+                transformer_name = getattr(transformer, "__name__", str(transformer))
+                self.monitor.log_error(f"Error in transformer {transformer_name}: {e}")
                 raise
         return result
 
     async def _dispatch_to_destinations(self, data: Any) -> None:
         """Dispatch data to destinations with concurrency control."""
 
-        async def try_destination(dest: Callable[[Any], asyncio.Future], data: Any) -> None:
+        async def try_destination(dest: DestinationType, data: Any) -> None:
             async with self.semaphore:
                 await dest(data)
 

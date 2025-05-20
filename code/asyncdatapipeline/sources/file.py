@@ -1,7 +1,6 @@
 """File data source implementation for async data pipeline."""
 
-import os
-from typing import AsyncGenerator, Union, List
+from typing import AsyncGenerator, List
 
 import aiofiles
 from aiocsv import AsyncReader
@@ -47,7 +46,7 @@ class CSVFileSource(FileSource):
         self.delimiter = delimiter
         self.has_header = has_header
 
-    async def generate(self) -> AsyncGenerator[List[Union[str, int]], None]:
+    async def generate(self) -> AsyncGenerator[List[str], None]:
         """Generate data from CSV file source."""
         try:
             async with aiofiles.open(self._file_path, mode="r", encoding=self._encoding) as file:

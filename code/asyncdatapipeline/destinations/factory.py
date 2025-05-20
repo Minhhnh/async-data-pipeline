@@ -2,7 +2,7 @@
 
 import asyncio
 import os
-from typing import Any, Callable
+from typing import Any, Callable, Dict, Coroutine, Optional
 
 from asyncdatapipeline.destinations.api import ApiDestination
 from asyncdatapipeline.destinations.file import (CSVFileDestination,
@@ -17,7 +17,7 @@ def file_destination(
     monitor: PipelineMonitor,
     file_path: str = "outputs/output.txt",
     **kwargs
-) -> Callable[[Any], asyncio.Future]:
+) -> Callable[[Any], Coroutine[Any, Any, None]]:
     """Factory function to create a FileDestination instance."""
     destination_dict = {
         ".csv": CSVFileDestination,
@@ -36,9 +36,9 @@ def file_destination(
 
 def sql_destination(
     monitor: PipelineMonitor,
-    db_config: dict,
+    db_config: Dict[str, Any],
     **kwargs
-) -> Callable[[Any], asyncio.Future]:
+) -> Callable[[Any], Coroutine[Any, Any, None]]:
     """Factory function to create a PostgreSQLDestination instance."""
     destination_dict = {
         "postgresql": PostgreSQLDestination,
@@ -46,7 +46,7 @@ def sql_destination(
     }
     destination_constructor = destination_dict.get(db_config['name'], PostgreSQLDestination)
     destination = destination_constructor(
-        db_config["credentials"], monitor, db_config["table_name"], db_config["columns"], ** kwargs)
+        db_config["credentials"], monitor, db_config["table_name"], db_config["columns"], **kwargs)
 
     async def wrapper(data: Any) -> None:
         await destination(data)
@@ -56,9 +56,9 @@ def sql_destination(
 
 def no_sql_destination(
     monitor: PipelineMonitor,
-    db_config: dict,
+    db_config: Dict[str, Any],
     **kwargs
-) -> Callable[[Any], asyncio.Future]:
+) -> Callable[[Any], Coroutine[Any, Any, None]]:
     """Factory function to create a MongoDBDestination instance."""
     destination_dict = {
         "mongodb": MongoDBDestination,
