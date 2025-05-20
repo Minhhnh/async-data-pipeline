@@ -2,15 +2,16 @@
 
 from typing import Dict
 
+from asyncdatapipeline.config import PipelineConfig
 from asyncdatapipeline.monitoring import PipelineMonitor
-from asyncdatapipeline.sources.twitter import TwitterSource
-from asyncdatapipeline.sources.file import FileSource, CSVFileSource
 from asyncdatapipeline.sources.api import ApiSource
+from asyncdatapipeline.sources.file import CSVFileSource, FileSource
+from asyncdatapipeline.sources.twitter import TwitterSource
 
 
-def twitter_source(credentials: Dict, monitor: PipelineMonitor, query: str = "#tech") -> TwitterSource:
+def twitter_source(config: PipelineConfig, monitor: PipelineMonitor, query: str = "#tech") -> TwitterSource:
     """Factory function to create a TwitterSource instance."""
-    return TwitterSource(credentials, monitor, query)
+    return TwitterSource(config, monitor, query)
 
 
 def file_source(file_path: str, monitor: PipelineMonitor, **kwargs) -> FileSource:

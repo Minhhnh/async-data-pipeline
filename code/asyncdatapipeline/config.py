@@ -51,9 +51,23 @@ class PipelineConfig:
     retry_attempts: int = 3
     retry_delay: float = 1.0
     use_tls: bool = True
+
+    # Recovery and checkpointing
+    enable_recovery: bool = True
+    checkpoint_path: str = "checkpoints/pipeline_state.json"
+    checkpoint_frequency: int = 100  # Save checkpoint every N items
+
+    # Multipart processing settings
     multipart_threshold: int = 1024 * 1024 * 100  # 100MB for multipart processing
+    multipart_chunk_size: int = 1024 * 1024  # 1MB chunks for multipart processing
+    multipart_enabled: bool = True  # Enable multipart processing by default
+
     # Dict with username, email, password
     twitter_credentials: dict = field(default_factory=_get_twitter_credentials)
     postgres: dict = field(default_factory=_get_postgres_info)
     mongo: dict = field(default_factory=_get_mongo_info)
     huggingface_token: Optional[str] = os.getenv("HUGGINGFACE_TOKEN")
+
+    # Additional settings
+    cookie_path: str = "cookies.json"
+    max_concurrent_requests: int = 1

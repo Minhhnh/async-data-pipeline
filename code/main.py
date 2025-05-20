@@ -19,7 +19,15 @@ from huggingface_hub import login
 
 
 async def main():
-    config = PipelineConfig(max_concurrent_tasks=5)
+    # Configure with multipart processing enabled
+    config = PipelineConfig(
+        max_concurrent_tasks=5,
+        enable_recovery=True,
+        checkpoint_path="checkpoints/pipeline_state.json",
+        multipart_enabled=True,
+        multipart_threshold=50 * 1024 * 1024,  # 50MB threshold
+        multipart_chunk_size=2 * 1024 * 1024,  # 2MB chunks
+    )
 
     # Login to Hugging Face Hub
     login(config.huggingface_token)
@@ -30,17 +38,24 @@ async def main():
     # Get current date and date 2 years ago for query
     current_date = datetime.now().strftime("%Y-%m-%d")
     two_years_ago = datetime.now().replace(year=datetime.now().year - 2).strftime("%Y-%m-%d")
-    QUERY = f'(from:elonmusk) lang:en until:{current_date} since:{two_years_ago}'
+    # QUERY = f'(from:elonmusk) lang:en until:{current_date} since:{two_years_ago}'
+    QUERY = "LLM OpenAI prompt engineering"
 
     # Helper to capture the monitor from the pipeline
     def set_monitor_and_create_pipeline():
         nonlocal monitor
         pipeline = AsyncDataPipeline(
             sources=[
-                # lambda: twitter_source(config.twitter_credentials, monitor, query=QUERY),
-                lambda: file_source("inputs/tweets.csv", monitor),
+                lambda: twitter_source(config, monitor, query=QUERY),
+                # Use file source with multipart processing
+                # lambda: file_source(
+                #     "inputs/tweets.txt",
+                #     monitor,
+                #     multipart_enabled=config.multipart_enabled,
+                #     chunk_size=config.multipart_chunk_size
+                # ),
+                # lambda: file_source("inputs/tweets.csv", monitor),
                 # lambda: api_source("https://api.example.com/data", monitor, locale="ja_JP", max_items=100),
-                # lambda: file_source("inputs/tweets.txt", monitor),
             ],
             transformers=[
                 uppercase_transformer(monitor),
@@ -50,8 +65,8 @@ async def main():
             ],
             destinations=[
                 file_destination(monitor, "outputs/output.txt"),
-                # file_destination(monitor, "outputs/output.csv"),
-                # file_destination(monitor, "outputs/output.json"),
+                file_destination(monitor, "outputs/output.csv"),
+                file_destination(monitor, "outputs/output.json"),
                 # sql_destination(monitor, config.postgres),
                 # no_sql_destination(monitor, config.mongo),
             ],

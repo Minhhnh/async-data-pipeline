@@ -31,7 +31,6 @@ class FileDestination(Destination):
                     await f.write(",".join(data.keys()) + "\n")
                     self._header_written = True
                 await f.write(",".join(map(str, data.values())) + "\n")
-            self.monitor.log_debug(f"Wrote data to {self._file_path}")
         except Exception as e:
             self.monitor.log_error(f"Error writing to file {self._file_path}: {e}")
             raise
@@ -54,7 +53,6 @@ class CSVFileDestination(FileDestination):
                     await writer.writerow(data.keys())
                     self._header_written = True
                 await writer.writerow(data.values())
-            self.monitor.log_debug(f"Wrote data {data.values()} to {self._file_path}")
         except Exception as e:
             self.monitor.log_error(f"Error writing to file {self._file_path}: {e}")
             raise
@@ -94,7 +92,6 @@ class JSONFileDestination(FileDestination):
                     # Add comma separator for subsequent items
                     await f.write(",")
                 await f.write(json_data)
-            self.monitor.log_event(f"Wrote JSON data to {self.file_path}")
         except Exception as e:
             self.monitor.log_error(f"Error writing JSON to {self.file_path}: {e}")
             raise
