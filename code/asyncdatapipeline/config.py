@@ -71,3 +71,9 @@ class PipelineConfig:
     # Additional settings
     cookie_path: str = "cookies.json"
     max_concurrent_requests: int = 1
+
+    # Security settings
+    verify_ssl: bool = True  # Verify SSL certificates
+    ssl_cert_path: Optional[str] = None  # Path to custom SSL certificate
+    enable_payload_encryption: bool = False  # Enable additional payload encryption
+    encryption_key: Optional[str] = os.getenv("ENCRYPTION_KEY")  # Key for payload encryption

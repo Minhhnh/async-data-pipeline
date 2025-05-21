@@ -1,7 +1,7 @@
 """Base class for all transformers."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Dict
 
 from asyncdatapipeline.monitoring import PipelineMonitor
 
@@ -31,12 +31,23 @@ class BaseTransformer(ABC):
             self.monitor.log_error(f"Error in transformer {self.__class__.__name__}: {e}")
             raise
 
-    def _get_key(self, data: Any, key: str = "text") -> Optional[str]:
-        """Extract unique key from data."""
-        if isinstance(data, dict):
-            # Prefer tweet_id if available, else use Text
-            return data.get(key, "")
-        elif isinstance(data, str):
-            return data
-        self.monitor.log_debug(f"Data is not a dict or string: {data}")
-        return None
+    def _get_key(self, data: Dict[str, Any]) -> str:
+        """Generate a unique key for the data item.
+
+        Args:
+            data: The data item to generate a key for
+
+        Returns:
+            A string key for bloom filter
+        """
+        if not isinstance(data, dict):
+            return str(data)
+
+        # For dict data, create a key from relevant fields
+        if 'id' in data:
+            return str(data['id'])
+        elif 'text' in data and 'username' in data:
+            return f"{data['username']}:{data['text']}"
+        else:
+            # Create a key from all values, sorted by keys for consistency
+            return ":".join(f"{k}={v}" for k, v in sorted(data.items()))

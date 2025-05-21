@@ -8,7 +8,7 @@ from asyncdatapipeline.destinations import (
 )
 from asyncdatapipeline.monitoring import PipelineMonitor
 from asyncdatapipeline.pipeline import AsyncDataPipeline, PipelineConfig
-from asyncdatapipeline.sources import api_source, file_source, twitter_source
+from asyncdatapipeline.sources import api_source, file_source, twitter_source, websocket_source
 from asyncdatapipeline.transformers import (
     csv_dict_transformer,
     deduplication_transformer,
@@ -46,16 +46,38 @@ async def main():
         nonlocal monitor
         pipeline = AsyncDataPipeline(
             sources=[
-                # lambda: twitter_source(config, monitor, query=QUERY),
-                # Use file source with multipart processing
+                # Twitter Source
+                # lambda: twitter_source(config, monitor, QUERY),
+
+                # REST API Source
+                # lambda: api_source("http://localhost:8000/tweet", monitor),
+
+                # WebSocket Source - new approach using the dedicated WebSocket source
+                # lambda: websocket_source("ws://localhost:8000/ws", monitor),
+
+                # File source with multipart processing
+                # lambda: file_source(
+                #     "inputs/tweets.txt",
+                #     monitor,
+                #     multipart_enabled=config.multipart_enabled,
+                #     chunk_size=config.multipart_chunk_size
+                # ),
+                # lambda: file_source(
+                #     "inputs/tweets.csv",
+                #     monitor,
+                #     delimiter=","
+                # ),
                 lambda: file_source(
-                    "inputs/tweets.txt",
+                    "inputs/tweets.json",
                     monitor,
-                    multipart_enabled=config.multipart_enabled,
-                    chunk_size=config.multipart_chunk_size
+                    lines_format=True
                 ),
-                # lambda: file_source("inputs/tweets.csv", monitor),
-                # lambda: api_source("https://api.example.com/data", monitor, locale="ja_JP", max_items=100),
+                lambda: file_source(
+                    "inputs/tweets.parquet",
+                    monitor,
+                    lines_format=True
+                ),
+
             ],
             transformers=[
                 uppercase_transformer(monitor),
@@ -64,9 +86,9 @@ async def main():
                 nsfw_transformer(monitor),
             ],
             destinations=[
-                file_destination(monitor, "outputs/output.txt"),
-                file_destination(monitor, "outputs/output.csv"),
                 file_destination(monitor, "outputs/output.json"),
+                # file_destination(monitor, "outputs/output.txt"),
+                # file_destination(monitor, "outputs/output.csv"),
                 # sql_destination(monitor, config.postgres),
                 # no_sql_destination(monitor, config.mongo),
             ],
@@ -75,8 +97,19 @@ async def main():
         monitor = pipeline.monitor
         return pipeline
 
-    pipeline = set_monitor_and_create_pipeline()
-    await pipeline.run()
+    # Start the FastAPI server in the background (for testing purposes)
+    try:
+        print("Starting pipeline - make sure the FastAPI server is running on port 8000")
+        print("You can start it with: python code/fastapi_server.py")
+
+        pipeline = set_monitor_and_create_pipeline()
+        await pipeline.run()
+
+    except KeyboardInterrupt:
+        print("Pipeline interrupted by user")
+    except Exception as e:
+        print(f"Error in pipeline: {e}")
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

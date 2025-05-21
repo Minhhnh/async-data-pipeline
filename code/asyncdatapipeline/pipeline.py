@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import ssl
 from contextlib import asynccontextmanager
 from time import time
 from typing import (
@@ -17,6 +18,7 @@ from typing import (
 import aiohttp
 from asyncdatapipeline.config import PipelineConfig
 from asyncdatapipeline.monitoring import PipelineMonitor
+from asyncdatapipeline.security import DataEncryptor
 
 T = TypeVar('T')
 SourceType = Callable[[], Any | asyncio.Future]
@@ -54,10 +56,34 @@ class AsyncDataPipeline:
         self.processed_ids: Set[str] = set()
         self.checkpoint_path = self.config.checkpoint_path
 
+        # Initialize security components
+        self.encryptor = None
+        if self.config.enable_payload_encryption and self.config.encryption_key:
+            self.encryptor = DataEncryptor(self.monitor, self.config.encryption_key)
+            self.monitor.log_event("Payload encryption enabled")
+
     @asynccontextmanager
     async def _http_session(self) -> AsyncGenerator[aiohttp.ClientSession, None]:
-        """Manage HTTP session with TLS support."""
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self.config.use_tls)) as session:
+        """Manage HTTP session with TLS support and certificate validation."""
+        # Configure SSL context if TLS is enabled
+        ssl_context = None
+        if self.config.use_tls:
+            ssl_context = ssl.create_default_context()
+
+            # Configure SSL verification
+            if not self.config.verify_ssl:
+                self.monitor.log_warning("SSL certificate verification is disabled")
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+
+            # Use custom certificate if provided
+            if self.config.ssl_cert_path and os.path.exists(self.config.ssl_cert_path):
+                self.monitor.log_event(f"Using custom SSL certificate: {self.config.ssl_cert_path}")
+                ssl_context.load_verify_locations(self.config.ssl_cert_path)
+
+        # Create session with configured SSL context
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        async with aiohttp.ClientSession(connector=connector) as session:
             self.session = session
             try:
                 yield session
@@ -155,7 +181,10 @@ class AsyncDataPipeline:
         return result
 
     async def _dispatch_to_destinations(self, data: Any) -> None:
-        """Dispatch data to destinations with concurrency control."""
+        """Dispatch data to destinations with concurrency control and optional encryption."""
+        # Apply encryption if enabled
+        if self.encryptor and self.config.enable_payload_encryption:
+            data = self.encryptor.encrypt(data)
 
         async def try_destination(dest: DestinationType, data: Any) -> None:
             async with self.semaphore:

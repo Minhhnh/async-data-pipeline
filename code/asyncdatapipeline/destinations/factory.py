@@ -19,6 +19,12 @@ def file_destination(
     **kwargs
 ) -> Callable[[Any], Coroutine[Any, Any, None]]:
     """Factory function to create a FileDestination instance."""
+    # Create directory if it doesn't exist
+    directory = os.path.dirname(file_path)
+    if directory and not os.path.exists(directory):
+        os.makedirs(directory, exist_ok=True)
+        monitor.log_event(f"Created directory: {directory}")
+
     destination_dict = {
         ".csv": CSVFileDestination,
         ".json": JSONFileDestination,
