@@ -1,15 +1,15 @@
 import asyncio
 from datetime import datetime
 
-from code.asyncdatapipeline.destinations import (
+from asyncdatapipeline.destinations import (
     file_destination,
     no_sql_destination,
     sql_destination,
 )
-from code.asyncdatapipeline.monitoring import PipelineMonitor
-from code.asyncdatapipeline.pipeline import AsyncDataPipeline, PipelineConfig
-from code.asyncdatapipeline.sources import api_source, file_source, twitter_source, websocket_source
-from code.asyncdatapipeline.transformers import (
+from asyncdatapipeline.monitoring import PipelineMonitor
+from asyncdatapipeline.pipeline import AsyncDataPipeline, PipelineConfig
+from asyncdatapipeline.sources import api_source, file_source, twitter_source, websocket_source
+from asyncdatapipeline.transformers import (
     csv_dict_transformer,
     deduplication_transformer,
     nsfw_transformer,
@@ -45,7 +45,7 @@ async def main():
         nonlocal monitor
         pipeline = AsyncDataPipeline(
             sources=[
-                ## Twitter Source
+                # Twitter Source
                 # lambda: twitter_source(config, monitor, QUERY),
 
                 # REST API Source
@@ -79,7 +79,7 @@ async def main():
 
             ],
             transformers=[
-                uppercase_transformer(monitor),
+                # uppercase_transformer(monitor),
                 csv_dict_transformer(monitor),
                 deduplication_transformer(monitor, capacity=10000, error_rate=0.01),
                 nsfw_transformer(monitor),

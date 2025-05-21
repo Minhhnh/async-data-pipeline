@@ -1659,7 +1659,7 @@ wheels = [
 [[package]]
 name = "woven"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "aiocsv" },
     { name = "aiofiles" },

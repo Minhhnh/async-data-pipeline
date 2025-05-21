@@ -133,7 +133,27 @@ class AsyncDataPipeline:
     async def _process_source(self, source: SourceType) -> None:
         """Process a single source, apply transformations, and dispatch to destinations."""
         try:
-            async for data in source():
+            # Initialize source with retry if needed
+            source_generator = None
+            attempts = 0
+            while attempts < self.config.retry_attempts:
+                attempts += 1
+                try:
+                    source_generator = source()
+                    break
+                except Exception as e:
+                    self.monitor.log_warning(
+                        f"Source initialization failed (attempt {attempts}/{self.config.retry_attempts}): {e}"
+                    )
+                    if attempts < self.config.retry_attempts:
+                        self.monitor.log_debug(f"Retrying in {self.config.retry_delay} seconds...")
+                        await asyncio.sleep(self.config.retry_delay)
+                    else:
+                        self.monitor.log_error(f"Source failed after {self.config.retry_attempts} attempts")
+                        raise
+
+            # Process source data
+            async for data in source_generator:
                 # Generate a consistent ID for the data item
                 data_id = str(hash(str(data)))
 
@@ -165,12 +185,12 @@ class AsyncDataPipeline:
         result = data
         for transformer in self.transformers:
             try:
-                # Apply transformer, supporting both async and non-async transformer functions
-                transformed = transformer(result)
-                if asyncio.iscoroutine(transformed):
-                    result = await transformed
-                else:
-                    result = transformed
+                # Apply transformer with retry logic
+                result = await self._apply_with_retry(
+                    transformer,
+                    result,
+                    f"Transformer {getattr(transformer, '__name__', str(transformer))}"
+                )
 
                 if result is None:  # Early exit for filters
                     break
@@ -180,6 +200,32 @@ class AsyncDataPipeline:
                 raise
         return result
 
+    async def _apply_with_retry(self, transformer: TransformerType, data: Any, component_name: str) -> Any:
+        """Apply a function with retry logic."""
+        attempts = 0
+        last_exception = None
+
+        while attempts < self.config.retry_attempts:
+            attempts += 1
+            try:
+                # Apply transformer, supporting both async and non-async transformer functions
+                transformed = transformer(data)
+                if asyncio.iscoroutine(transformed):
+                    return await transformed
+                return transformed
+            except Exception as e:
+                last_exception = e
+                self.monitor.log_warning(
+                    f"{component_name} failed (attempt {attempts}/{self.config.retry_attempts}): {e}"
+                )
+                if attempts < self.config.retry_attempts:
+                    self.monitor.log_debug(f"Retrying in {self.config.retry_delay} seconds...")
+                    await asyncio.sleep(self.config.retry_delay)
+
+        # If we get here, all retry attempts failed
+        self.monitor.log_error(f"{component_name} failed after {self.config.retry_attempts} attempts")
+        raise last_exception
+
     async def _dispatch_to_destinations(self, data: Any) -> None:
         """Dispatch data to destinations with concurrency control and optional encryption."""
         # Apply encryption if enabled
@@ -188,7 +234,12 @@ class AsyncDataPipeline:
 
         async def try_destination(dest: DestinationType, data: Any) -> None:
             async with self.semaphore:
-                await dest(data)
+                # Apply destination with retry logic
+                await self._apply_with_retry(
+                    lambda d: dest(d),
+                    data,
+                    f"Destination {getattr(dest, '__name__', str(dest))}"
+                )
 
         tasks = [try_destination(dest, data) for dest in self.destinations]
         await asyncio.gather(*tasks, return_exceptions=True)
