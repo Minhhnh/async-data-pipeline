@@ -53,10 +53,10 @@ class Tweet(BaseModel):
 def generate_fake_tweet() -> Dict[str, Any]:
     """Generate a single fake tweet."""
     return {
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "username": faker.user_name(),
         "text": faker.text(max_nb_chars=280),
-        "created_at": faker.date_time_this_year().isoformat(),
+        "created_at": faker.date_time_this_year().strftime("%Y-%m-%d %H:%M:%S"),
         "retweets": random.randint(0, 5000),
         "likes": random.randint(0, 10000)
     }
@@ -98,4 +98,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 if __name__ == "__main__":
-    uvicorn.run("fastapi_server:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("fastapi_server:app", host="0.0.0.0", port=9001, reload=True)

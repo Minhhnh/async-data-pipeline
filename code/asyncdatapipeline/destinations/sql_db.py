@@ -1,8 +1,9 @@
-from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
+import asyncpg
+import dateutil.parser
 from asyncdatapipeline.destinations.base import Destination
 from asyncdatapipeline.monitoring import PipelineMonitor
-import asyncpg
 
 
 class SQLDB(Destination):
@@ -45,8 +46,8 @@ class PostgreSQLDestination(SQLDB):
             if not self._connection:
                 await self.connect()
             if self.table_name and self.columns:
-                data['timestamp'] = datetime.strptime(data['timestamp'], "%Y-%m-%d %H:%M:%S")
-                data['created_at'] = datetime.strptime(data['created_at'], "%Y-%m-%d %H:%M:%S")
+                data['timestamp'] = dateutil.parser.parse(data['timestamp']).replace(tzinfo=None)
+                data['created_at'] = dateutil.parser.parse(data['created_at']).replace(tzinfo=None)
                 data['retweets'] = int(data['retweets'])
                 data['likes'] = int(data['likes'])
                 columns = ", ".join(self.columns)

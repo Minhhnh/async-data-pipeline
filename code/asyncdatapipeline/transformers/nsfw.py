@@ -117,7 +117,7 @@ class NSFWTransformer(BaseTransformer):
 
             if nsfw_score >= self.threshold:
                 self.monitor.log_event(
-                    f"Filtered NSFW tweet (score: {nsfw_score:.2f}) from {data.get('username', 'unknown')} wth content: {text[:50]}...")
+                    f"Filtered NSFW tweet (score: {nsfw_score:.2f}) with content: {text[:50]}...")
                 return None
             return data
         except Exception as e:

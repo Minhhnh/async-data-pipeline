@@ -59,7 +59,7 @@ def file_source(file_path: str, monitor: PipelineMonitor, **kwargs) -> Any:
             csv_params["has_header"] = kwargs_copy.pop("has_header")
         return CSVFileSource(**csv_params)
 
-    elif file_path.endswith((".json", ".jsonl")):
+    elif file_path.endswith(".jsonl"):
         # JSON-specific parameters
         json_params = {
             **common_params,

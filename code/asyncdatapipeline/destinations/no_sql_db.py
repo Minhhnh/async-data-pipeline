@@ -24,7 +24,7 @@ class MongoDBDestination(NoSQLDB):
         super().__init__(db_config, monitor)
         self._db_config = db_config
         self.monitor = monitor
-        self._db: AsyncMongoClient
+        self._db: AsyncMongoClient = None
         self._credentials = db_config.get("credentials", {})
 
     async def connect(self):
